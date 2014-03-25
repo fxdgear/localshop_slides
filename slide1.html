@@ -118,7 +118,7 @@ repository: http://localhost:8000/simple/
                     <h3>Install a package from Localshop</h3>
                     <p>Now that we've published our package to our private localshop, lets install the package to test it out.</p>
                     <p><pre><code>
-(localshop)$ pip install -i http://localhost:8000/simple/ localshop
+(localshop)$ pip install -i http://myusername:mysecret@localhost:8000/simple/ localshop
                     </code></pre></p>
                 </section>
 
@@ -159,6 +159,57 @@ stderr_logfile=/var/log/localshop/localshop-celery.err
 autostart=true
 autorestart=true
                     </code></pre></p>
+                </section>
+
+                <section>
+                    <h3>Starting localshop</h3>
+                    <p>Now we've setup our Venv, we've installed Supervisor, and we've set up our localshop supervisor conf file.</p>
+                    <p>Using <code>supervisorctl</code> we can look to see the status of our localshop</p>
+                    <p><pre><code>
+$ sudo supervisorctl status
+$ sudo supervisorctl start all
+$ sudo supervisorctl restart celery-localshop
+                    </code></pre>
+
+                </section>
+
+                <section>
+                    <h3>Using Nginx</h3>
+                    <p>If you use nginx, you can create a really simple nginx conf file which will proxy requests from port 80 to your localshop instance.</p>
+                    <p><strong>Gotcha</strong> When doing this you need to be sure that you pass along the requesting IP address from nginx to localshop. Localshop will by default recognize requests coming from localshop as coming from <code>0.0.0.0</code>. So if you've set up your CIDR's none of them will work right.</p>
+                </section>
+
+                <section>
+                    <h3>Example Nginx Conf</h3>
+                    <p><pre><code>
+server {
+    listen   80;
+    server_name localshop.yourdomain.com;
+    root /var/www/localshop/lib/python2.7/site-packages/localshop;
+    location /media/ {
+        # if asset versioning is used
+        if ($query_string) {
+            expires max;
+        }
+    }
+    location /static {
+        root /var/www/localshop/lib/python2.7/site-packages/localshop;
+    }
+    location /admin/media/ {
+        root /var/www/localshop/lib/python2.7/site-packages/django/contrib;
+    }
+    location / {
+        proxy_pass_header Server;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Scheme $scheme;
+        proxy_connect_timeout 10;
+        proxy_read_timeout 10;
+        proxy_pass http://localhost:8000/;
+    }
+}
+                    </code></pre>
                 </section>
 
                 <section>
