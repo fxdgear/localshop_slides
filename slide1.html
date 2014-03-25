@@ -36,7 +36,7 @@
                 <section>
                   <h3>What is PyPI?</h3>
                   <div class = "left-align">
-                    <p>PyPI is pernounced "Pie-p-eye" </br>it stands for the Python Package Index</p>
+                    <p>PyPI is pronounced "Pie-p-eye" </br>it stands for the Python Package Index</p>
                     <p></p>
                     <p>PyPI is different than PyPy which is Python, written in Python. </p>
                   </div>
@@ -45,7 +45,18 @@
                 <!-- Localshop-->
                 <section>
                   <h3>Localshop</h3>
+                  <h4>Why use localshop</h4>
+                  <p>Localshop can be used to privately host your python packages as well as mirror public packages from PyPI.</p>
                   <p>Localshop can be downloaded from <a href="https://github.com/mvantellingen/localshop">Github</a></p>
+                </section>
+
+                <section>
+                    <h3>Why?</h3>
+                    <p>Why would you wanna host your own private mirror?</p>
+                    <p>At SimpleEnergy we use localshop to host our python package(s). This helps in our deployment.</p>
+                    <p>Since we run a PaaS, we build a generic python application that can be pip installed into many different environments.</p>
+                    <p>This reduces dependencies on GitHub which can (and does frequently) go down. We don't want to be caught in a situation where mid-deployment GitHub goes down.</p>
+                    <p>We can also ensure specific versions of our python packages are installed in any environment.</p>
                 </section>
 
                 <section>
@@ -53,17 +64,107 @@
                     <p>The instructions on the Readme for localshop are pretty straight forward, but since we're here we'll cover it anyway.</p>
                     <div class = "left-align">
                     <ol>
-                        <li>Create a virtualenv</li>
+                        <li><code>mkvirtualenv localshop</code></li>
                         <li><code>pip install localshop</code></li>
+                        <li><code>localshop init</code></li>
+                        <li><code>localshop upgrade</code></li>
                     </ol>
                     </div>
                 </section>
 
+                <section>
+                    <h3>Running your localshop</h3>
+                    <p>Now that you have localshop installed lets run it to make sure that it's working.</p>
+                    <p><pre><code>
+(localshop)$ localshop run_gunicorn
+(localshop)$ localshop celery worker -B -E
+                    </code></pre></p>
+                    <p>Now Localshop will be running on port 8000, you can access it by going to <a href="http://localhost:8000">http://localhost:8000</a></p>
+                </section>
+
+                <section>
+                    <h3>Create Authentication</h3>
+                    <p>Localshop requires credentials as well as <a href="https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing">CIDR</a> (Classless Inter-Domain Routing) to allow access to your privately hosted packages</p>
+                    <ul>
+                        <li>Credentials: created via the localshop interface is straight forward.</li>
+                        <li>CIDR: Used to restrict access to your localshop based on IP addresses.</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h3>Using Localshop</h3>
+                    <p>Now in order to use localshop you'll have to configure your <code>~/.pyprc</code> file</p>
+                    <p><pre><code>
+[distutils]
+index-servers =
+    local
+
+[local]
+username: myusername
+password: mysecret
+repository: http://localhost:8000/simple/
+                    </code></pre></p>
+                </section>
+
+                <section>
+                    <h3>Upload your package to Localshop</h3>
+                    <p>Now we're ready to upload our package to localshop.</p>
+                    <p><pre><code>
+(localshop)$ python setup.py upload sdist -r local
+                    </code></pre></p>
+                </section>
+
+                <section>
+                    <h3>Install a package from Localshop</h3>
+                    <p>Now that we've published our package to our private localshop, lets install the package to test it out.</p>
+                    <p><pre><code>
+(localshop)$ pip install -i http://localhost:8000/simple/ localshop
+                    </code></pre></p>
+                </section>
+
+                <section>
+                    <h3>Installing other packages</h3>
+                    <p>When you install other packages using your local mirror, localshop will create a request to PyPI and pass that request through to you.</p>
+                    <p>Localshop's celery instance will run in the background to ensure that localshop keeps packages up to date in the background.</p>
+                </section>
+
+                <section>
+                    <h3>Deploying Localshop</h3>
+                    <p>Running localshop on a remote server is pretty straight forward using Supervisor.</p>
+                    <p>See example supervisor conf file for running the localshop website and celery process.</p>
+                </section>
+
+                <section>
+                    <h3>Example Conf File</h3>
+                    <p><pre><code>
+[program:localshop]
+environment = USER="django",HOME="/home/django",PATH="/var/www/localshop/bin:$PATH",PYTHONPATH="/var/www/localshop/lib/python2.7/site-packages:$PYTHONPATH",DJANGO_SETTINGS_MODULE="localshop.settings"
+command=/var/www/localshop/bin/localshop run_gunicorn 0.0.0.0:8000
+user=django
+numprocs=1
+directory=/home/django
+stdout_logfile=/var/log/localshop/localshop.log
+stderr_logfile=/var/log/localshop/localshop.err
+autostart=true
+autorestart=true
+
+[program:celery-localshop]
+environment = USER="django",HOME="/home/django",PATH="/var/www/localshop/bin:$PATH",PYTHONPATH="/var/www/localshop/lib/python2.7/site-packages:$PYTHONPATH",DJANGO_SETTINGS_MODULE="localshop.settings"
+command=/var/www/localshop/bin/localshop celeryd -v 2 -B -s celery -E -l INFO --scheduler=djcelery.schedulers.DatabaseScheduler
+user=django
+numprocs=1
+directory=/home/django
+stdout_logfile=/var/log/localshop/localshop-celery.log
+stderr_logfile=/var/log/localshop/localshop-celery.err
+autostart=true
+autorestart=true
+                    </code></pre></p>
+                </section>
 
                 <section>
                     <h3>Questions?</h3>
                 </section>
-                <section></section>
+
             </div>
         </div>
 
